@@ -1,0 +1,48 @@
+================================================================================
+           CAMAÇARI INOVA — GUIA RÁPIDO DO PROJETO E INSTRUÇÕES
+================================================================================
+
+Este pacote contém o código-fonte completo da plataforma Camaçari INOVA,
+já integrado com o banco de dados e autenticação em nuvem do Supabase.
+
+--------------------------------------------------------------------------------
+1. COMO ABRIR E TESTAR O SITE
+--------------------------------------------------------------------------------
+- Abra diretamente o arquivo "index.html" em qualquer navegador moderno 
+  (Chrome, Edge, Firefox, Brave, Safari) dando 2 cliques nele.
+- Ou, se for desenvolvedor, abra a pasta no VS Code e utilize a extensão
+  "Live Server" para rodar em localhost.
+
+--------------------------------------------------------------------------------
+2. ESTRUTURA DOS ARQUIVOS
+--------------------------------------------------------------------------------
+- index.html           : Página principal (Landing page + Área logada do App).
+- script.js            : Lógica JavaScript completa (Leaflet, Mapas, Supabase, 
+                         Autenticação, Moderação, Matchmaking e Chat Realtime).
+- style.css            : Folha de estilos completa (Design system, Modo Escuro/Claro).
+- supabase_schema.sql  : Script SQL para criação das tabelas, RLS e dados demo no Supabase.
+- logo.inova.svg       : Logotipo oficial em vetor SVG.
+- lucide.min.js        : Biblioteca de ícones vetoriais.
+- fonts/               : Família tipográfica completa Alpino.
+- EXPLICACAO_DO_SITE.txt : Documentação detalhada sobre regras de negócio e arquitetura.
+
+--------------------------------------------------------------------------------
+3. CONFIGURAÇÃO DO BANCO DE DADOS (SUPABASE)
+--------------------------------------------------------------------------------
+O site já está apontado para o projeto Supabase:
+- URL: https://rgcnqtejewjmpabelcjc.supabase.co
+- Chave pública (anon): configurada no script.js.
+
+Caso queira recriar o banco em outro projeto Supabase:
+1. Crie um projeto em https://supabase.com
+2. No menu lateral, acesse "SQL Editor" -> "New query".
+3. Copie todo o conteúdo do arquivo "supabase_schema.sql" e clique em "Run".
+4. Substitua a URL e a Anon Key no topo do arquivo "script.js".
+
+--------------------------------------------------------------------------------
+4. COMO ENTRAR COMO MODERADOR / ADMINISTRADOR
+--------------------------------------------------------------------------------
+- Cadastre-se ou entre com o e-mail: admin@camacariinova.com
+- Automaticamente o perfil receberá a permissão de "Moderador", liberando a aba
+  "Moderação" no menu lateral para aprovar, rejeitar ou excluir cadastros.
+================================================================================
