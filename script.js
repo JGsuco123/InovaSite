@@ -1035,6 +1035,7 @@ function orgRow(o, mode) {
 
 /* ---------- Conexões e solicitações de contato ---------- */
 const connections = () => LS.get('inova_connections', []);
+const orgViewButton = id => `<button type="button" class="btn btn-ghost-dark btn-sm connection-org-view" data-view-org="${esc(id)}"><i data-lucide="eye" class="ic"></i><span>Ver</span></button>`;
 function renderMatches() {
   const mine = myOrgs();
   const needs = mine.flatMap(o => tags(o.dem).map(term => ({ term, source: o.nome })));
@@ -1063,7 +1064,7 @@ function renderMatches() {
         : connection
         ? '<button type="button" class="btn btn-orange btn-sm" disabled>Solicitação enviada</button>'
         : `<button type="button" class="btn btn-orange btn-sm" data-connect="${esc(o.id)}">Solicitar contato</button>`;
-    return `<article class="row"><div class="row-main"><b>${esc(o.nome)}</b><small>${esc((TIPOS[o.tipo] || TIPOS.outro).nome)} · ${esc(o.cidade || 'Ecossistema')}</small><p>Compatibilidade: ${hits.map(esc).join(', ')}</p><small>Eu tenho: ${esc(o.rec || o.comp || 'Palavras-chave cadastradas')}</small></div><div class="row-actions ${connection ? 'connection-actions' : ''}">${status}${action}</div></article>`;
+    return `<article class="row"><div class="row-main"><div class="connection-org-line"><b>${esc(o.nome)}</b>${orgViewButton(o.id)}</div><small>${esc((TIPOS[o.tipo] || TIPOS.outro).nome)} · ${esc(o.cidade || 'Ecossistema')}</small><p>Compatibilidade: ${hits.map(esc).join(', ')}</p><small>Eu tenho: ${esc(o.rec || o.comp || 'Palavras-chave cadastradas')}</small></div><div class="row-actions ${connection ? 'connection-actions' : ''}">${status}${action}</div></article>`;
   });
   const incoming = connections().filter(c =>
     DB.orgs().some(o => o.id === c.target && o.ownerId === DB.session())
@@ -1082,12 +1083,14 @@ function renderMatches() {
       : c.status === 'recusada'
         ? '<span class="connection-status connection-status-rejected">Solicitação recusada</span>'
         : '<span class="connection-status connection-status-pending">Solicitação recebida</span>';
-    return `<article class="row"><div class="row-main"><b>${esc(requester)}</b><small>${esc(institution)}</small></div><div class="row-actions connection-actions">${status}${actions}</div></article>`;
+    return `<article class="row"><div class="row-main"><b>${esc(requester)}</b><div class="connection-org-line"><small>${esc(institution)}</small>${orgViewButton(org.id)}</div></div><div class="row-actions connection-actions">${status}${actions}</div></article>`;
   });
   el.innerHTML = [
     incomingCards.length ? '<h3 class="connection-section-title">Solicitações recebidas</h3>' + incomingCards.join('') : '',
     matchCards.length ? '<h3 class="connection-section-title">Sugestões de conexão</h3>' + matchCards.join('') : ''
   ].filter(Boolean).join('') || '<div class="empty-box">Ainda não encontramos compatibilidades. Cadastre seus itens em “Eu procuro” para receber sugestões de organizações.</div>';
+  refreshIcons();
+  el.querySelectorAll('[data-view-org]').forEach(btn => btn.addEventListener('click', () => openOrg(btn.dataset.viewOrg)));
   el.querySelectorAll('[data-connect]').forEach(btn => btn.addEventListener('click', async () => {
     const targetId = btn.dataset.connect;
     let connId = uid();
@@ -1148,7 +1151,10 @@ function renderMatches() {
 let activeChatId = null;
 function renderMessages() {
   const me = DB.session(), list = connections();
-  const mine = list.filter(c => c.from === me || DB.orgs().some(o => o.id === c.target && o.ownerId === me));
+  const mine = list.filter(c =>
+    c.status !== 'recusada' &&
+    (c.from === me || DB.orgs().some(o => o.id === c.target && o.ownerId === me))
+  );
   const el = $('#messageList');
   el.innerHTML = mine.length ? mine.map(c => {
     const target = DB.orgs().find(o => o.id === c.target) || {
@@ -1164,13 +1170,15 @@ function renderMessages() {
     const actions = incoming && c.status === 'pendente'
       ? `<button type="button" class="btn btn-orange btn-sm" data-connection-action="aceitar" data-id="${esc(c.id)}">Aceitar</button><button type="button" class="btn btn-ghost-dark btn-sm" data-connection-action="recusar" data-id="${esc(c.id)}">Recusar</button>`
       : c.status === 'aceita'
-        ? `<button type="button" class="btn ${activeChatId === c.id ? 'btn-orange' : 'btn-ghost-dark'} btn-sm" data-open-chat="${esc(c.id)}">Abrir chat</button>`
+        ? `<button type="button" class="btn ${activeChatId === c.id ? 'btn-orange' : 'btn-ghost-dark'} btn-sm" data-open-chat="${esc(c.id)}">Abrir chat</button><span class="connection-status">Conexão já realizada</span>`
         : `<small>${esc(c.status === 'recusada' ? 'Recusada' : 'Aguardando resposta')}</small>`;
-    const statusLabel = c.status === 'aceita' ? 'Conexão já realizada' : c.status === 'pendente' ? (incoming ? 'Solicitação recebida' : 'Solicitação enviada') : 'Solicitação recusada';
+    const statusLabel = c.status === 'pendente' ? (incoming ? 'Solicitação recebida' : 'Solicitação enviada') : '';
     const statusClass = c.status === 'aceita' ? 'connection-status' : c.status === 'recusada' ? 'connection-status connection-status-rejected' : '';
-    return `<article class="row chat-contact ${activeChatId === c.id ? 'is-active' : ''}"><div class="row-main"><b>${esc(peer || 'Organização')}</b><small>${esc(institution || 'Instituição')}</small><small class="${statusClass}">${esc(statusLabel)}</small></div><div class="row-actions">${actions}</div></article>`;
+    return `<article class="row chat-contact ${activeChatId === c.id ? 'is-active' : ''}"><div class="row-main"><div class="connection-org-line"><b>${esc(peer || 'Organização')}</b>${orgViewButton(c.target)}</div><small>${esc(institution || 'Instituição')}</small>${statusLabel ? `<small class="${statusClass}">${esc(statusLabel)}</small>` : ''}</div><div class="row-actions ${c.status === 'aceita' || (incoming && c.status === 'pendente') ? 'connection-actions' : ''}">${actions}</div></article>`;
   }).join('') : '<div class="empty-box">Você ainda não tem solicitações. Encontre uma conexão na Central de conexões.</div>';
 
+  refreshIcons();
+  el.querySelectorAll('[data-view-org]').forEach(btn => btn.addEventListener('click', () => openOrg(btn.dataset.viewOrg)));
   el.querySelectorAll('[data-connection-action]').forEach(btn => btn.addEventListener('click', async () => {
     const action = btn.dataset.connectionAction;
     const newStatus = action === 'aceitar' ? 'aceita' : 'recusada';
@@ -1213,7 +1221,9 @@ function renderMessages() {
   const peerName = incoming ? requesterName : target.nome;
   const institution = [target.nome, TIPOS[target.tipo]?.nome, target.cidade].filter(Boolean).join(' · ');
   const messages = active.messages || [];
-  panel.innerHTML = `<div class="chat-header"><div class="panel-tag">Chat da conexão</div><h3>${esc(peerName || 'Organização')}</h3><p class="muted">${esc(institution || 'Instituição')}</p></div><div class="chat-feed" id="chatFeed">${messages.length ? messages.map(m => `<div class="chat-message ${m.sender === me ? 'mine' : ''}"><p>${esc(m.text)}</p><small>${fmtDate(m.created)} · ${m.sender === me ? 'Você' : esc(peerName || 'Solicitante')}</small></div>`).join('') : '<div class="chat-placeholder">Inicie a conversa com uma mensagem.</div>'}</div><form id="chatForm" class="chat-compose"><textarea name="message" maxlength="2000" rows="2" placeholder="Escreva sua mensagem…" required></textarea><button class="btn btn-orange" type="submit">Enviar</button></form>`;
+  panel.innerHTML = `<div class="chat-header"><div class="panel-tag">Chat da conexão</div><div class="chat-header-title"><h3>${esc(peerName || 'Organização')}</h3>${orgViewButton(active.target)}</div><p class="muted">${esc(institution || 'Instituição')}</p></div><div class="chat-feed" id="chatFeed">${messages.length ? messages.map(m => `<div class="chat-message ${m.sender === me ? 'mine' : ''}"><p>${esc(m.text)}</p><small>${fmtDate(m.created)} · ${m.sender === me ? 'Você' : esc(peerName || 'Solicitante')}</small></div>`).join('') : '<div class="chat-placeholder">Inicie a conversa com uma mensagem.</div>'}</div><form id="chatForm" class="chat-compose"><textarea name="message" maxlength="2000" rows="2" placeholder="Escreva sua mensagem…" required></textarea><button class="btn btn-orange" type="submit">Enviar</button></form>`;
+  refreshIcons();
+  panel.querySelector('[data-view-org]').addEventListener('click', event => openOrg(event.currentTarget.dataset.viewOrg));
   $('#chatForm').addEventListener('submit', async e => {
     e.preventDefault();
     const input = e.currentTarget.elements.message, text = input.value.trim();
