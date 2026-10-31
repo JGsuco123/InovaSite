@@ -63,8 +63,8 @@ CREATE TABLE IF NOT EXISTS public.organizacoes (
 
 COMMENT ON TABLE public.organizacoes IS 'Instituições, empresas e iniciativas cadastradas no ecossistema Camaçari INOVA.';
 COMMENT ON COLUMN public.organizacoes.areas IS 'Cidades e regiões de atuação na RMS (Camaçari, Salvador, Lauro de Freitas, etc).';
-COMMENT ON COLUMN public.organizacoes.recursos IS 'Ativos e recursos disponíveis para colaboração mútua (usados no matchmaking).';
-COMMENT ON COLUMN public.organizacoes.demandas IS 'Problemas e necessidades de parcerias (usados no matchmaking).';
+COMMENT ON COLUMN public.organizacoes.recursos IS 'Itens em “Eu tenho”: recursos disponíveis para colaboração mútua (usados no matchmaking).';
+COMMENT ON COLUMN public.organizacoes.demandas IS 'Itens em “Eu procuro”: problemas e necessidades de parcerias (usados no matchmaking).';
 COMMENT ON COLUMN public.organizacoes.status IS 'Status da moderação: analise, aprovada, rejeitada ou privada.';
 
 -- ==============================================================================

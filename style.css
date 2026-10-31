@@ -1487,8 +1487,48 @@ button {
 .row-main { flex: 1; min-width: 0; }
 .row-main small { display: block; color: var(--text-muted); margin-top: 4px; }
 .row-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row-actions.connection-actions {
+  width: 184px;
+  max-width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.connection-actions .connection-status,
+.connection-actions .btn {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  justify-content: center;
+}
 .chat-contact { padding: 14px 16px; }
 .chat-contact.is-active { border-color: var(--orange); background: var(--bg-card-hover); }
+.connection-status {
+  display: inline-flex !important;
+  align-items: center;
+  width: fit-content;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: #16A34A;
+  color: #fff !important;
+  font-size: .88rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.connection-status-rejected { background: #DC2626; }
+.connection-status-pending { background: #D97706; }
+.chat-contact .connection-status {
+  padding: 4px 10px;
+  font-size: .76rem;
+}
+.connection-section-title {
+  flex: 0 0 100%;
+  margin: 18px 0 0;
+  color: var(--text-main);
+  font: 700 1rem var(--f-title);
+}
+.connection-section-title:first-child { margin-top: 0; }
 .chat-panel { min-height: 520px; margin: 0; display: flex; flex-direction: column; }
 .chat-header { padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle); }
 .chat-header h3 { font: 700 1.1rem var(--f-title); color: var(--text-main); }
@@ -1638,6 +1678,61 @@ button {
 }
 [data-theme="light"] .field select { color-scheme: light; }
 .field textarea { resize: vertical; min-height: 96px; }
+.creatable-select {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  box-shadow: var(--shadow-inset);
+  transition: all var(--trans-fast);
+}
+.creatable-select:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--orange-glow);
+}
+.creatable-tags { display: contents; }
+.creatable-select > input[type=text] {
+  flex: 1 1 220px;
+  width: auto;
+  min-width: 180px;
+  padding: 6px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.creatable-select > input[type=text]:focus {
+  border: 0;
+  box-shadow: none;
+}
+.creatable-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--orange-soft);
+  color: var(--text-main);
+  font-size: .86rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.creatable-tag button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.creatable-tag button:hover { color: var(--danger); }
 .field input:focus,
 .field select:focus,
 .field textarea:focus {

@@ -9,7 +9,7 @@
 
 /* ---------- 1) CONFIGURAÇÃO ---------- */
 const ADMIN_EMAILS = ['admin@camacariinova.com'];   // quem se cadastrar com esses e-mails vira moderador
-const SHOW_DEMO = true;                              // false = remove as organizações de exemplo do mapa
+const SHOW_DEMO = false;                             // não exibe dados de demonstração no mapa
 
 /* ---------- SUPABASE CLIENT CONFIGURATION ---------- */
 const SUPABASE_URL = 'https://rgcnqtejewjmpabelcjc.supabase.co';
@@ -304,7 +304,11 @@ async function fetchOrgsFromSupabase() {
   if (!sb) return;
   try {
     const { data, error } = await sb.from('organizacoes').select('*');
-    if (!error && Array.isArray(data) && data.length) {
+    if (error) {
+      console.warn('Erro ao sincronizar organizações com Supabase:', error);
+      return;
+    }
+    if (Array.isArray(data)) {
       const mapped = data.map(o => ({
         id: o.id,
         ownerId: o.owner_id,
@@ -349,14 +353,23 @@ async function syncConnectionsAndMessages() {
     if (conns && conns.length) {
       const localConns = connections();
       const merged = [...localConns];
+      const requesterIds = [...new Set(conns.map(c => c.solicitante_id))];
+      const { data: requesters, error: requestersError } = await sb
+        .from('profiles')
+        .select('id, nome')
+        .in('id', requesterIds);
+      if (requestersError) console.warn('Erro ao carregar perfis das solicitações:', requestersError);
+      const requesterNames = new Map((requesters || []).map(profile => [profile.id, profile.nome]));
       conns.forEach(c => {
         const idx = merged.findIndex(x => x.id === c.id);
+        const existing = idx >= 0 ? merged[idx] : {};
         const item = {
           id: c.id,
           from: c.solicitante_id,
           target: c.organizacao_alvo_id,
           status: c.status,
           created: c.created_at,
+          requesterName: requesterNames.get(c.solicitante_id) || existing.requesterName || '',
           messages: []
         };
         if (idx >= 0) merged[idx] = { ...merged[idx], ...item };
@@ -743,9 +756,9 @@ function showOrg(id) {
     ${row('Tipo de ator', esc(t.nome))}
     ${dono && !o.demo ? row('Status', `<span class="status st-${o.status}">${STATUS[o.status]}</span>${o.motivo ? '<br>Motivo: ' + esc(o.motivo) : ''}`) : ''}
     ${row('Descrição institucional', esc(o.desc))}
-    ${row('Competências e tecnologias', esc(o.comp))}
-    ${row('Recursos para colaboração', esc(o.rec))}
-    ${row('Demandas / necessidades', esc(o.dem))}
+    ${row('Palavras-chave', esc(o.comp))}
+    ${row('Eu tenho', esc(o.rec))}
+    ${row('Eu procuro', esc(o.dem))}
     ${row('Endereço', o.rua ? esc(`${o.rua}, ${o.numero} — ${o.bairro}, ${o.cidade} · CEP ${o.cep}`) : esc(o.cidade))}
     ${row('Área de atuação', esc((o.areas || []).join(', ')))}
     ${(dono || publico) ? row('Site', o.site ? `<a href="${esc(o.site)}" target="_blank" rel="noopener">${esc(o.site)}</a>` : '') : ''}
@@ -764,8 +777,6 @@ $('#f-tipo-cadastro').addEventListener('change', e => {
   const pessoa = e.target.value === 'pessoa';
   $('#juridicoFields').hidden = pessoa;
   $('#fNomeLabel').innerHTML = pessoa ? 'Nome completo <i>*</i>' : 'Nome da empresa ou instituição <i>*</i>';
-  $('#f-tipo').disabled = pessoa;
-  if (pessoa) $('#f-tipo').value = 'outro';
 });
 $('#f-cnpj').addEventListener('input', e => {
   const d = e.target.value.replace(/\D/g, '').slice(0, 14);
@@ -789,7 +800,7 @@ const RULES = {
   bairro: v => v.trim() ? '' : 'Informe o bairro.',
   cidade: v => v.trim() ? '' : 'Informe a cidade.',
   areas:  v => v.length ? '' : 'Selecione pelo menos uma cidade/região de atuação.',
-  desc:   v => v.trim().length >= 20 ? '' : 'Descreva a organização em pelo menos 20 caracteres.',
+  desc:   v => v.trim().length < 20 ? 'Descreva a organização em pelo menos 20 caracteres.' : v.trim().length > 600 ? 'A descrição deve ter no máximo 600 caracteres.' : '',
   site:   v => !v.trim() || isUrl(v.trim()) ? '' : 'Link inválido. Use o formato https://...',
   email:  v => !v.trim() || /^\S+@\S+\.\S+$/.test(v.trim()) ? '' : 'E-mail inválido.',
   autoriza: v => v ? '' : 'Escolha uma das opções de autorização.'
@@ -797,6 +808,37 @@ const RULES = {
 const getVal = n => n === 'areas' ? $$('[name=areas]:checked', form).map(c => c.value)
                   : n === 'autoriza' ? ($('[name=autoriza]:checked', form)?.value || '')
                   : form.elements[n].value;
+
+function setCreatableValues(name, values) {
+  const field = $(`[data-creatable="${name}"]`, form);
+  const hidden = form.elements[name];
+  const items = [...new Set(values.map(value => value.trim()).filter(Boolean))];
+  hidden.value = items.join(', ');
+  field.querySelector('.creatable-tags').innerHTML = items.map((value, index) =>
+    `<span class="creatable-tag">${esc(value)}<button type="button" data-remove-tag="${index}" aria-label="Remover ${esc(value)}">×</button></span>`
+  ).join('');
+  field.querySelectorAll('[data-remove-tag]').forEach(button => button.addEventListener('click', () => {
+    items.splice(Number(button.dataset.removeTag), 1);
+    setCreatableValues(name, items);
+  }));
+}
+
+['comp', 'rec', 'dem'].forEach(name => {
+  const input = $(`#f-${name}-input`);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const value = input.value.trim().replace(/,$/, '');
+      if (value) setCreatableValues(name, [...tags(form.elements[name].value), value]);
+      input.value = '';
+    } else if (e.key === 'Backspace' && !input.value) {
+      const values = tags(form.elements[name].value);
+      values.pop();
+      setCreatableValues(name, values);
+    }
+  });
+});
+
 function setErr(n, msg) {
   const span = $(`[data-err="${n}"]`, form); if (!span) return;
   span.textContent = msg || '';
@@ -845,6 +887,7 @@ async function buscaCep(cep) {
 
 function initForm() {
   form.reset();
+  ['comp', 'rec', 'dem'].forEach(name => setCreatableValues(name, []));
   $$('[data-err]', form).forEach(s => setErr(s.dataset.err, ''));
   $('#cepHint').textContent = '';
   const o = editingId ? DB.orgs().find(x => x.id === editingId) : null;
@@ -855,7 +898,8 @@ function initForm() {
     $('#f-tipo-cadastro').dispatchEvent(new Event('change'));
     form.elements.razaoSocial.value = o.razaoSocial || '';
     form.elements.cnpj.value = o.cnpj || '';
-    ['nome', 'tipo', 'cep', 'numero', 'rua', 'bairro', 'cidade', 'desc', 'comp', 'rec', 'dem', 'site', 'email'].forEach(n => form.elements[n].value = o[n] || '');
+    ['nome', 'tipo', 'cep', 'numero', 'rua', 'bairro', 'cidade', 'desc', 'site', 'email'].forEach(n => form.elements[n].value = o[n] || '');
+    ['comp', 'rec', 'dem'].forEach(name => setCreatableValues(name, tags(o[name])));
     $$('[name=areas]', form).forEach(c => c.checked = (o.areas || []).includes(c.value));
     const r = $(`[name=autoriza][value=${o.autoriza ? 'sim' : 'nao'}]`, form); if (r) r.checked = true;
   }
@@ -865,13 +909,30 @@ function initForm() {
 
 async function geocode(d) {
   try {
-    const q = `${d.rua}, ${d.numero}, ${d.bairro}, ${d.cidade}, Bahia, Brasil`;
-    const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q));
+    const params = new URLSearchParams({
+      format: 'json',
+      limit: '1',
+      addressdetails: '1',
+      countrycodes: 'br',
+      street: `${d.numero} ${d.rua}`,
+      postalcode: d.cep.replace(/\D/g, ''),
+      city: d.cidade,
+      state: 'Bahia',
+      country: 'Brasil'
+    });
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
     const j = await r.json();
     if (j[0]) return { lat: +j[0].lat, lng: +j[0].lon };
-  } catch (_) { }
+    const address = `${d.numero}, ${d.rua}, ${d.cep}, ${d.bairro}, ${d.cidade}, Bahia, Brasil`;
+    const fallbackParams = new URLSearchParams({ format: 'json', limit: '1', addressdetails: '1', countrycodes: 'br', q: address });
+    const fallback = await fetch(`https://nominatim.openstreetmap.org/search?${fallbackParams}`);
+    const matches = await fallback.json();
+    if (matches[0]) return { lat: +matches[0].lat, lng: +matches[0].lon };
+  } catch (err) {
+    console.warn('Não foi possível geocodificar o endereço informado:', err);
+  }
   const c = CIDADES[d.cidade] || CIDADES['Camaçari'];
-  return { lat: c[0] + (Math.random() - .5) * .02, lng: c[1] + (Math.random() - .5) * .02 };
+  return { lat: c[0], lng: c[1] };
 }
 
 form.addEventListener('submit', async e => {
@@ -988,10 +1049,45 @@ function renderMatches() {
     return { o, hits: [...new Set(hits.map(h => h.term))] };
   }).filter(x => x.hits.length).sort((a, b) => b.hits.length - a.hits.length);
   const el = $('#matchList');
-  el.innerHTML = found.length ? found.map(({ o, hits }) => {
-    const sent = connections().some(c => c.from === DB.session() && c.target === o.id);
-    return `<article class="row"><div class="row-main"><b>${esc(o.nome)}</b><small>${esc((TIPOS[o.tipo] || TIPOS.outro).nome)} · ${esc(o.cidade || 'Ecossistema')}</small><p>Compatibilidade: ${hits.map(esc).join(', ')}</p><small>Ativos: ${esc(o.rec || o.comp || 'Competências cadastradas')}</small></div><div class="row-actions"><button type="button" class="btn btn-orange btn-sm" data-connect="${esc(o.id)}" ${sent ? 'disabled' : ''}>${sent ? 'Solicitação enviada' : 'Solicitar contato'}</button></div></article>`;
-  }).join('') : `<div class="empty-box">Ainda não encontramos compatibilidades. Cadastre ativos e demandas em uma organização aprovada para receber sugestões.</div>`;
+  const matchCards = found.map(({ o, hits }) => {
+    const connection = connections().find(c => c.from === DB.session() && c.target === o.id);
+    const status = connection?.status === 'aceita'
+      ? '<span class="connection-status">Solicitação aceita</span>'
+      : connection?.status === 'recusada'
+        ? '<span class="connection-status connection-status-rejected">Solicitação recusada</span>'
+        : '';
+    const action = connection?.status === 'aceita'
+      ? `<button type="button" class="btn btn-orange btn-sm" data-match-chat="${esc(connection.id)}">Acessar chat</button>`
+      : connection?.status === 'recusada'
+        ? ''
+        : connection
+        ? '<button type="button" class="btn btn-orange btn-sm" disabled>Solicitação enviada</button>'
+        : `<button type="button" class="btn btn-orange btn-sm" data-connect="${esc(o.id)}">Solicitar contato</button>`;
+    return `<article class="row"><div class="row-main"><b>${esc(o.nome)}</b><small>${esc((TIPOS[o.tipo] || TIPOS.outro).nome)} · ${esc(o.cidade || 'Ecossistema')}</small><p>Compatibilidade: ${hits.map(esc).join(', ')}</p><small>Eu tenho: ${esc(o.rec || o.comp || 'Palavras-chave cadastradas')}</small></div><div class="row-actions ${connection ? 'connection-actions' : ''}">${status}${action}</div></article>`;
+  });
+  const incoming = connections().filter(c =>
+    DB.orgs().some(o => o.id === c.target && o.ownerId === DB.session())
+  );
+  const incomingCards = incoming.map(c => {
+    const org = DB.orgs().find(o => o.id === c.target);
+    const requester = c.requesterName || DB.users().find(u => u.id === c.from)?.nome || 'Solicitante';
+    const institution = [org.nome, TIPOS[org.tipo]?.nome, org.cidade].filter(Boolean).join(' · ');
+    const actions = c.status === 'pendente'
+      ? `<button type="button" class="btn btn-orange btn-sm" data-incoming-action="aceitar" data-id="${esc(c.id)}">Aceitar</button><button type="button" class="btn btn-danger btn-sm" data-incoming-action="recusar" data-id="${esc(c.id)}">Recusar</button>`
+      : c.status === 'aceita'
+        ? `<button type="button" class="btn btn-orange btn-sm" data-match-chat="${esc(c.id)}">Acessar chat</button>`
+        : '';
+    const status = c.status === 'aceita'
+      ? '<span class="connection-status">Solicitação aceita</span>'
+      : c.status === 'recusada'
+        ? '<span class="connection-status connection-status-rejected">Solicitação recusada</span>'
+        : '<span class="connection-status connection-status-pending">Solicitação recebida</span>';
+    return `<article class="row"><div class="row-main"><b>${esc(requester)}</b><small>${esc(institution)}</small></div><div class="row-actions connection-actions">${status}${actions}</div></article>`;
+  });
+  el.innerHTML = [
+    incomingCards.length ? '<h3 class="connection-section-title">Solicitações recebidas</h3>' + incomingCards.join('') : '',
+    matchCards.length ? '<h3 class="connection-section-title">Sugestões de conexão</h3>' + matchCards.join('') : ''
+  ].filter(Boolean).join('') || '<div class="empty-box">Ainda não encontramos compatibilidades. Cadastre seus itens em “Eu procuro” para receber sugestões de organizações.</div>';
   el.querySelectorAll('[data-connect]').forEach(btn => btn.addEventListener('click', async () => {
     const targetId = btn.dataset.connect;
     let connId = uid();
@@ -1008,8 +1104,45 @@ function renderMatches() {
       }
     }
     const list = connections();
-    list.push({ id: connId, from: DB.session(), target: targetId, created: new Date().toISOString(), status: 'pendente' });
+    const target = DB.orgs().find(o => o.id === targetId) || {};
+    list.push({
+      id: connId,
+      from: DB.session(),
+      target: targetId,
+      targetName: target.nome || '',
+      targetTipo: target.tipo || '',
+      targetCidade: target.cidade || '',
+      requesterName: user()?.nome || '',
+      created: new Date().toISOString(),
+      status: 'pendente'
+    });
     LS.set('inova_connections', list); toast('Solicitação de contato enviada.'); renderMatches();
+  }));
+  el.querySelectorAll('[data-match-chat]').forEach(btn => btn.addEventListener('click', () => {
+    activeChatId = btn.dataset.matchChat;
+    goApp('mensagens');
+  }));
+  el.querySelectorAll('[data-incoming-action]').forEach(btn => btn.addEventListener('click', async () => {
+    const newStatus = btn.dataset.incomingAction === 'aceitar' ? 'aceita' : 'recusada';
+    const connectionId = btn.dataset.id;
+    if (sb && !connectionId.startsWith('demo')) {
+      try {
+        const { error } = await sb.from('conexoes').update({ status: newStatus }).eq('id', connectionId);
+        if (error) {
+          console.warn('Erro ao atualizar conexão no Supabase:', error);
+          toast('Não foi possível atualizar a solicitação. Tente novamente.', true);
+          return;
+        }
+      } catch (err) {
+        console.warn('Erro ao atualizar conexão no Supabase:', err);
+        toast('Não foi possível atualizar a solicitação. Tente novamente.', true);
+        return;
+      }
+    }
+    const updated = connections().map(c => c.id === connectionId ? { ...c, status: newStatus } : c);
+    LS.set('inova_connections', updated);
+    renderMatches();
+    toast(newStatus === 'aceita' ? 'Conexão aceita. O chat está disponível.' : 'Solicitação recusada.');
   }));
 }
 let activeChatId = null;
@@ -1018,16 +1151,24 @@ function renderMessages() {
   const mine = list.filter(c => c.from === me || DB.orgs().some(o => o.id === c.target && o.ownerId === me));
   const el = $('#messageList');
   el.innerHTML = mine.length ? mine.map(c => {
-    const target = DB.orgs().find(o => o.id === c.target) || {};
+    const target = DB.orgs().find(o => o.id === c.target) || {
+      nome: c.targetName,
+      tipo: c.targetTipo,
+      cidade: c.targetCidade
+    };
     const sender = DB.users().find(u => u.id === c.from) || {};
     const incoming = target.ownerId === me;
-    const peer = incoming ? sender.nome : target.nome;
+    const requesterName = c.requesterName || sender.nome || (c.from === user()?.id ? user().nome : '') || 'Solicitante';
+    const peer = incoming ? requesterName : target.nome;
+    const institution = [target.nome, TIPOS[target.tipo]?.nome, target.cidade].filter(Boolean).join(' · ');
     const actions = incoming && c.status === 'pendente'
       ? `<button type="button" class="btn btn-orange btn-sm" data-connection-action="aceitar" data-id="${esc(c.id)}">Aceitar</button><button type="button" class="btn btn-ghost-dark btn-sm" data-connection-action="recusar" data-id="${esc(c.id)}">Recusar</button>`
       : c.status === 'aceita'
         ? `<button type="button" class="btn ${activeChatId === c.id ? 'btn-orange' : 'btn-ghost-dark'} btn-sm" data-open-chat="${esc(c.id)}">Abrir chat</button>`
         : `<small>${esc(c.status === 'recusada' ? 'Recusada' : 'Aguardando resposta')}</small>`;
-    return `<article class="row chat-contact ${activeChatId === c.id ? 'is-active' : ''}"><div class="row-main"><b>${esc(peer || 'Participante')}</b><small>${esc(c.status === 'aceita' ? 'Conexão aceita' : c.status === 'pendente' ? (incoming ? 'Solicitação recebida' : 'Solicitação enviada') : 'Solicitação recusada')}</small></div><div class="row-actions">${actions}</div></article>`;
+    const statusLabel = c.status === 'aceita' ? 'Conexão já realizada' : c.status === 'pendente' ? (incoming ? 'Solicitação recebida' : 'Solicitação enviada') : 'Solicitação recusada';
+    const statusClass = c.status === 'aceita' ? 'connection-status' : c.status === 'recusada' ? 'connection-status connection-status-rejected' : '';
+    return `<article class="row chat-contact ${activeChatId === c.id ? 'is-active' : ''}"><div class="row-main"><b>${esc(peer || 'Organização')}</b><small>${esc(institution || 'Instituição')}</small><small class="${statusClass}">${esc(statusLabel)}</small></div><div class="row-actions">${actions}</div></article>`;
   }).join('') : '<div class="empty-box">Você ainda não tem solicitações. Encontre uma conexão na Central de conexões.</div>';
 
   el.querySelectorAll('[data-connection-action]').forEach(btn => btn.addEventListener('click', async () => {
@@ -1035,9 +1176,16 @@ function renderMessages() {
     const newStatus = action === 'aceitar' ? 'aceita' : 'recusada';
     if (sb && !btn.dataset.id.startsWith('demo')) {
       try {
-        await sb.from('conexoes').update({ status: newStatus }).eq('id', btn.dataset.id);
+        const { error } = await sb.from('conexoes').update({ status: newStatus }).eq('id', btn.dataset.id);
+        if (error) {
+          console.warn('Erro ao atualizar conexão no Supabase:', error);
+          toast('Não foi possível atualizar a solicitação. Tente novamente.', true);
+          return;
+        }
       } catch (err) {
         console.warn('Erro ao atualizar conexão no Supabase:', err);
+        toast('Não foi possível atualizar a solicitação. Tente novamente.', true);
+        return;
       }
     }
     const next = connections().map(c => c.id === btn.dataset.id ? { ...c, status: newStatus } : c);
@@ -1054,12 +1202,18 @@ function renderMessages() {
     panel.innerHTML = '<div class="chat-placeholder">Selecione uma conexão aceita para abrir o chat.</div>';
     return;
   }
-  const target = DB.orgs().find(o => o.id === active.target) || {};
+  const target = DB.orgs().find(o => o.id === active.target) || {
+    nome: active.targetName,
+    tipo: active.targetTipo,
+    cidade: active.targetCidade
+  };
   const sender = DB.users().find(u => u.id === active.from) || {};
   const incoming = target.ownerId === me;
-  const peerName = incoming ? sender.nome : target.nome;
+  const requesterName = active.requesterName || sender.nome || (active.from === user()?.id ? user().nome : '') || 'Solicitante';
+  const peerName = incoming ? requesterName : target.nome;
+  const institution = [target.nome, TIPOS[target.tipo]?.nome, target.cidade].filter(Boolean).join(' · ');
   const messages = active.messages || [];
-  panel.innerHTML = `<div class="chat-header"><div class="panel-tag">Chat da conexão</div><h3>${esc(peerName || 'Participante')}</h3></div><div class="chat-feed" id="chatFeed">${messages.length ? messages.map(m => `<div class="chat-message ${m.sender === me ? 'mine' : ''}"><p>${esc(m.text)}</p><small>${fmtDate(m.created)} · ${m.sender === me ? 'Você' : esc(peerName || 'Participante')}</small></div>`).join('') : '<div class="chat-placeholder">Inicie a conversa com uma mensagem.</div>'}</div><form id="chatForm" class="chat-compose"><textarea name="message" maxlength="2000" rows="2" placeholder="Escreva sua mensagem…" required></textarea><button class="btn btn-orange" type="submit">Enviar</button></form>`;
+  panel.innerHTML = `<div class="chat-header"><div class="panel-tag">Chat da conexão</div><h3>${esc(peerName || 'Organização')}</h3><p class="muted">${esc(institution || 'Instituição')}</p></div><div class="chat-feed" id="chatFeed">${messages.length ? messages.map(m => `<div class="chat-message ${m.sender === me ? 'mine' : ''}"><p>${esc(m.text)}</p><small>${fmtDate(m.created)} · ${m.sender === me ? 'Você' : esc(peerName || 'Solicitante')}</small></div>`).join('') : '<div class="chat-placeholder">Inicie a conversa com uma mensagem.</div>'}</div><form id="chatForm" class="chat-compose"><textarea name="message" maxlength="2000" rows="2" placeholder="Escreva sua mensagem…" required></textarea><button class="btn btn-orange" type="submit">Enviar</button></form>`;
   $('#chatForm').addEventListener('submit', async e => {
     e.preventDefault();
     const input = e.currentTarget.elements.message, text = input.value.trim();
@@ -1195,7 +1349,16 @@ $('#app').addEventListener('click', async e => {
     case 'del':
       if (!confirm(`Excluir "${o.nome}"? Esta ação não pode ser desfeita.`)) return;
       if (sb && !id.startsWith('demo')) {
-        try { await sb.from('organizacoes').delete().eq('id', id); } catch (_) {}
+        try {
+          const { error } = await sb.from('organizacoes').delete().eq('id', id);
+          if (error) {
+            console.warn('Erro ao excluir organização no Supabase:', error);
+            return toast('Não foi possível excluir a organização. Tente novamente.', true);
+          }
+        } catch (err) {
+          console.warn('Erro ao excluir organização no Supabase:', err);
+          return toast('Não foi possível excluir a organização. Tente novamente.', true);
+        }
       }
       DB.saveOrgs(orgs.filter(x => x.id !== id)); toast('Organização excluída.');
       refreshAllMaps(); refresh(); break;
@@ -1301,9 +1464,9 @@ const PERGUNTAS = [
 ];
 const NIVEIS = [
   { min: 0,  nome: 'Explorador', txt: 'Sua organização está começando a jornada. O foco agora é criar base e hábito.', dicas: ['Defina 1 desafio claro para resolver com inovação.', 'Reserve um tempo mensal para testar ideias com a equipe.', 'Cadastre sua organização e conheça quem já atua na região.'] },
-  { min: 35, nome: 'Experimentador', txt: 'Já existem iniciativas, mas ainda sem constância. É hora de estruturar.', dicas: ['Crie um canal simples para coletar e priorizar ideias.', 'Escolha 2 indicadores objetivos para acompanhar seus pilotos.', 'Busque no mapa organizações com competências complementares.'] },
+  { min: 35, nome: 'Experimentador', txt: 'Já existem iniciativas, mas ainda sem constância. É hora de estruturar.', dicas: ['Crie um canal simples para coletar e priorizar ideias.', 'Escolha 2 indicadores objetivos para acompanhar seus pilotos.', 'Busque no mapa organizações com palavras-chave complementares.'] },
   { min: 65, nome: 'Estruturado', txt: 'Você já tem processos e cultura em desenvolvimento. O próximo passo é escalar conexões.', dicas: ['Formalize orçamento e metas claras de inovação.', 'Abra projetos conjuntos com universidades, centros de P&D ou startups.', 'Compartilhe seus casos de sucesso para atrair novos parceiros.'] },
-  { min: 85, nome: 'Referência', txt: 'Sua organização é líder em inovação no território. Momento de acelerar parcerias.', dicas: ['Mentore e apoie organizações em estágios iniciais.', 'Lidere projetos colaborativos de alto impacto no ecossistema.', 'Mantenha seus ativos e demandas atualizados no mapa.'] }
+  { min: 85, nome: 'Referência', txt: 'Sua organização é líder em inovação no território. Momento de acelerar parcerias.', dicas: ['Mentore e apoie organizações em estágios iniciais.', 'Lidere projetos colaborativos de alto impacto no ecossistema.', 'Mantenha “Eu tenho” e “Eu procuro” atualizados no mapa.'] }
 ];
 
 function createQuizController({ stepId, barId, bodyId, prevId, nextId, quizBoxId, resultBoxId, isApp = false }) {

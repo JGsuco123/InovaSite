@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Camaçari INOVA</title>
-  <meta name="description" content="Plataforma que mapeia organizações, competências, recursos e demandas de Camaçari e região e promove conexões e parcerias de inovação.">
+  <meta name="description" content="Plataforma que mapeia organizações, palavras-chave e recursos de Camaçari e região e promove conexões e parcerias de inovação.">
   <link rel="icon" href="logo.inova.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="style.css">
@@ -81,7 +81,7 @@
         <ul class="stats">
           <li><b id="statOrgs">0</b><span>Organizações no mapa</span></li>
           <li><b id="statTipos">0</b><span>Tipos de atores</span></li>
-          <li><b id="statComp">0</b><span>Competências</span></li>
+          <li><b id="statComp">0</b><span>Palavras-chave</span></li>
         </ul>
       </div>
     </section>
@@ -92,10 +92,10 @@
         <div class="section-head reveal">
           <p class="eyebrow dark">Sobre</p>
           <h2>Sobre a Central INOVA</h2>
-          <p>A Central INOVA é uma plataforma destinada a mapear organizações, identificar competências, recursos, tecnologias e demandas disponíveis e aproximar atores que possam desenvolver projetos e parcerias.</p>
+          <p>A Central INOVA é uma plataforma destinada a mapear organizações, identificar palavras-chave, recursos, tecnologias e oportunidades e aproximar atores que possam desenvolver projetos e parcerias.</p>
         </div>
         <div class="features">
-          <article class="feature reveal"><svg class="ic-lg c-orange"><use href="#i-map"/></svg><h3>Mapear</h3><p>Mapa interativo com organizações, competências e recursos do território.</p></article>
+          <article class="feature reveal"><svg class="ic-lg c-orange"><use href="#i-map"/></svg><h3>Mapear</h3><p>Mapa interativo com organizações, palavras-chave e recursos do território.</p></article>
           <article class="feature reveal"><svg class="ic-lg c-navy"><use href="#i-link"/></svg><h3>Conectar</h3><p>Aproximamos atores que podem desenvolver projetos e parcerias juntos.</p></article>
           <article class="feature reveal"><svg class="ic-lg c-orange"><use href="#i-bulb"/></svg><h3>Inovar</h3><p>Acesso facilitado a oportunidades e estímulo à colaboração.</p></article>
           <article class="feature reveal"><svg class="ic-lg c-navy"><use href="#i-users"/></svg><h3>Fortalecer</h3><p>Uma base de informações organizada para fortalecer o ecossistema.</p></article>
@@ -110,13 +110,13 @@
         <div class="section-head reveal">
           <p class="eyebrow">Mapa</p>
           <h2>Explore o mapa</h2>
-          <p>Filtre por tipo de ator, busque por nome ou competência e clique em uma organização. Para ver os detalhes completos é preciso estar logado.</p>
+          <p>Filtre por tipo de ator, busque por nome ou palavra-chave e clique em uma organização. Para ver os detalhes completos é preciso estar logado.</p>
         </div>
 
         <div class="toolbar reveal">
           <label class="search">
             <svg class="ic"><use href="#i-search"/></svg>
-            <input type="search" id="searchInput" placeholder="Buscar organização ou competência…" autocomplete="off">
+            <input type="search" id="searchInput" placeholder="Buscar organização ou palavra-chave…" autocomplete="off">
           </label>
           <div class="filters" id="chips" role="group" aria-label="Filtrar por tipo de ator"></div>
         </div>
@@ -285,7 +285,7 @@
           <div>
             <div class="panel-tag"><svg class="ic c-orange"><use href="#i-map"/></svg> Mapa no Painel</div>
             <h2 class="h2 first">Mapa Interativo de Organizações</h2>
-            <p class="muted">Acesse a localização de organizações, competências e demandas diretamente do seu painel sem sair da sua conta.</p>
+            <p class="muted">Acesse a localização de organizações, palavras-chave e oportunidades diretamente do seu painel sem sair da sua conta.</p>
           </div>
           <div class="panel-head-actions">
             <button class="btn btn-ghost-dark btn-sm" type="button" data-action="app" data-view="mapa">Ver tela cheia <svg class="ic"><use href="#i-arrow"/></svg></button>
@@ -295,7 +295,7 @@
         <div class="toolbar toolbar-dash">
           <label class="search search-dash">
             <svg class="ic"><use href="#i-search"/></svg>
-            <input type="search" id="dashSearchInput" placeholder="Buscar no mapa por organização ou competência…" autocomplete="off">
+            <input type="search" id="dashSearchInput" placeholder="Buscar no mapa por organização ou palavra-chave…" autocomplete="off">
           </label>
           <div class="filters filters-dash" id="dashChips" role="group" aria-label="Filtrar por tipo de ator"></div>
         </div>
@@ -325,7 +325,7 @@
       <div class="toolbar">
         <label class="search">
           <svg class="ic"><use href="#i-search"/></svg>
-          <input type="search" id="appMapSearchInput" placeholder="Buscar por organização ou competência…" autocomplete="off">
+          <input type="search" id="appMapSearchInput" placeholder="Buscar por organização ou palavra-chave…" autocomplete="off">
         </label>
         <div class="filters" id="appMapChips" role="group" aria-label="Filtrar por tipo de ator"></div>
       </div>
@@ -364,7 +364,7 @@
     <section data-view="nova" hidden>
       <div class="panel intro">
         <h2 id="formTitle"><svg class="ic"><use href="#i-building"/></svg><span>Apresentação / Objetivo</span></h2>
-        <p><strong>Objetivo:</strong> mapear organizações, competências, recursos, tecnologias e demandas do ecossistema, promovendo conexões e oportunidades de colaboração.</p>
+        <p><strong>Objetivo:</strong> mapear organizações, palavras-chave, recursos, tecnologias e oportunidades do ecossistema, promovendo conexões e colaboração.</p>
         <p class="note-box"><strong>Nota:</strong> as informações serão analisadas pela equipe responsável e somente os dados autorizados e aprovados serão publicados na Central de Conexões.</p>
       </div>
 
@@ -407,12 +407,36 @@
         <!-- Seção 3 -->
         <fieldset class="step" hidden>
           <legend><svg class="ic"><use href="#i-bulb"/></svg> Seção 3: Conhecendo sua Organização</legend>
-          <div class="field"><label for="f-desc">Descrição Institucional <i>*</i></label><textarea id="f-desc" name="desc" rows="4" maxlength="1200"></textarea><span class="err" data-err="desc"></span></div>
-          <div class="field"><label for="f-comp">Competências e tecnologias</label><textarea id="f-comp" name="comp" rows="3" maxlength="800" placeholder="Separe por vírgula. Ex.: Desenvolvimento de software, análise de dados"></textarea></div>
-          <div class="panel-tag">Ativos</div>
-          <div class="field"><label for="f-rec">Recursos, serviços e conhecimentos que posso compartilhar</label><textarea id="f-rec" name="rec" rows="3" maxlength="800" placeholder="Ex.: investimento, laboratório, equipamentos, tecnologia, mentoria, equipe técnica"></textarea></div>
-          <div class="panel-tag">Demandas</div>
-          <div class="field"><label for="f-dem">Problemas, necessidades e parcerias que procuro</label><textarea id="f-dem" name="dem" rows="3" maxlength="800" placeholder="Ex.: investimento, parceiro de pesquisa, fornecedor, solução tecnológica"></textarea></div>
+          <div class="field"><label for="f-desc">Descrição Institucional <i>*</i></label><textarea id="f-desc" name="desc" rows="4" maxlength="600" placeholder="Quem somos, quais são nossas competências e o que buscamos."></textarea><small class="hint">Até 600 caracteres: conte quem vocês são, quais são suas competências e o que buscam.</small><span class="err" data-err="desc"></span></div>
+          <div class="field">
+            <label for="f-comp-input">Palavras-chave</label>
+            <div class="creatable-select" data-creatable="comp">
+              <div class="creatable-tags" id="f-comp-tags"></div>
+              <input id="f-comp-input" type="text" placeholder="Digite uma palavra-chave e pressione Enter" aria-label="Adicionar palavra-chave">
+            </div>
+            <input id="f-comp" name="comp" type="hidden">
+            <small class="hint">Adicione termos que descrevem a organização; pressione Enter ou vírgula para incluir cada um.</small>
+          </div>
+          <div class="panel-tag">Eu tenho</div>
+          <div class="field">
+            <label for="f-rec-input">Recursos, serviços e conhecimentos que posso compartilhar</label>
+            <div class="creatable-select" data-creatable="rec">
+              <div class="creatable-tags" id="f-rec-tags"></div>
+              <input id="f-rec-input" type="text" placeholder="Digite um item e pressione Enter" aria-label="Adicionar item em Eu tenho">
+            </div>
+            <input id="f-rec" name="rec" type="hidden">
+            <small class="hint">Ex.: investimento, laboratório, equipamentos, tecnologia, mentoria.</small>
+          </div>
+          <div class="panel-tag">Eu procuro</div>
+          <div class="field">
+            <label for="f-dem-input">Problemas, necessidades e parcerias que procuro</label>
+            <div class="creatable-select" data-creatable="dem">
+              <div class="creatable-tags" id="f-dem-tags"></div>
+              <input id="f-dem-input" type="text" placeholder="Digite um item e pressione Enter" aria-label="Adicionar item em Eu procuro">
+            </div>
+            <input id="f-dem" name="dem" type="hidden">
+            <small class="hint">Ex.: investimento, parceiro de pesquisa, fornecedor, solução tecnológica.</small>
+          </div>
         </fieldset>
 
         <!-- Seção 4 -->
@@ -444,8 +468,8 @@
       </form>
     </section>
 
-    <section data-view="conexoes" hidden><div class="panel-head-row"><div><div class="panel-tag">Matchmaking</div><h2 class="h2 first">Central de conexões</h2><p class="muted">Encontre participantes com ativos compatíveis com suas demandas e inicie uma conversa.</p></div><button class="btn btn-ghost-dark btn-sm" type="button" data-action="app" data-view="nova">Atualizar ativos e demandas</button></div><div class="rows" id="matchList"></div></section>
-    <section data-view="mensagens" hidden><div class="panel-head-row"><div><div class="panel-tag">Conexões</div><h2 class="h2 first">Conversas e solicitações</h2><p class="muted">Aceite solicitações para liberar o chat com outros participantes.</p></div></div><div class="chat-layout"><div class="rows chat-inbox" id="messageList"></div><div class="panel chat-panel" id="chatPanel"><div class="chat-placeholder">Selecione uma conexão aceita para abrir o chat.</div></div></div></section>
+    <section data-view="conexoes" hidden><div class="panel-head-row"><div><div class="panel-tag">Matchmaking</div><h2 class="h2 first">Central de conexões</h2><p class="muted">Encontre participantes com itens compatíveis entre “Eu tenho” e “Eu procuro” e inicie uma conversa.</p></div><button class="btn btn-ghost-dark btn-sm" type="button" data-action="app" data-view="nova">Atualizar “Eu tenho” e “Eu procuro”</button></div><div class="rows" id="matchList"></div></section>
+    <section data-view="mensagens" hidden><div class="panel-head-row"><div><div class="panel-tag">Conexões</div><h2 class="h2 first">Conversas e solicitações</h2><p class="muted">Aceite solicitações para liberar o chat e veja os dados da instituição conectada.</p></div></div><div class="chat-layout"><div class="rows chat-inbox" id="messageList"></div><div class="panel chat-panel" id="chatPanel"><div class="chat-placeholder">Selecione uma conexão aceita para abrir o chat.</div></div></div></section>
 
     <!-- MINHAS ORGANIZAÇÕES -->
     <section data-view="minhas" hidden>
@@ -549,14 +573,14 @@
     <button type="button" class="icon-btn" data-action="close" aria-label="Fechar"><svg class="ic"><use href="#i-x"/></svg></button>
   </div>
   <div class="help-body">
-    <h3>Descrição institucional</h3>
-    <p>Em 3 a 5 frases: o que a organização faz, há quanto tempo atua, quem atende e qual é o diferencial. <em>Ex.: “Empresa de tecnologia fundada em 2015 que desenvolve sistemas de gestão para indústrias do Polo de Camaçari.”</em></p>
-    <h3>Competências e tecnologias</h3>
-    <p>Liste o que vocês sabem fazer, separando por vírgula. Use termos que outras organizações procurariam: “automação”, “análise de dados”, “capacitação técnica”.</p>
-    <h3>Recursos para colaboração</h3>
-    <p>O que pode ser compartilhado: laboratórios, equipamentos, equipe, espaço, rede de contatos, programas de formação.</p>
-    <h3>Demandas atuais</h3>
-    <p>O que vocês procuram: parceiros de pesquisa, financiamento, mentoria, fornecedores, talentos, clientes-piloto.</p>
+    <h3>Descrição institucional (até 600 caracteres)</h3>
+    <p>Resuma em até 600 caracteres: <strong>Quem somos</strong>, <strong>Competências</strong> e <strong>O que buscamos</strong>.</p>
+    <h3>Palavras-chave</h3>
+    <p>Inclua termos que descrevem a organização e que outras pessoas poderiam pesquisar, como “automação”, “análise de dados” e “capacitação técnica”.</p>
+    <h3>Eu tenho</h3>
+    <p>Adicione recursos, serviços e conhecimentos que pode compartilhar: laboratórios, equipamentos, equipe, espaço, rede de contatos ou programas de formação.</p>
+    <h3>Eu procuro</h3>
+    <p>Adicione o que busca: parceiros de pesquisa, financiamento, mentoria, fornecedores, talentos ou clientes-piloto.</p>
     <h3>Autorização</h3>
     <p>Somente os dados autorizados e aprovados pela equipe são publicados. Se não autorizar, a organização fica salva na sua conta, mas não aparece no mapa.</p>
   </div>
