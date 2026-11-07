@@ -329,6 +329,9 @@ async function fetchOrgsFromSupabase() {
         dem: o.demandas,
         site: o.site,
         email: o.email,
+        linkedin: o.linkedin,
+        telefone: o.telefone_contato,
+        outros: o.outros_contato,
         autoriza: o.autoriza,
         lat: o.lat,
         lng: o.lng,
@@ -763,6 +766,9 @@ function showOrg(id) {
     ${row('Área de atuação', esc((o.areas || []).join(', ')))}
     ${(dono || publico) ? row('Site', o.site ? `<a href="${esc(o.site)}" target="_blank" rel="noopener">${esc(o.site)}</a>` : '') : ''}
     ${(dono || publico) ? row('E-mail de contato', o.email ? `<a href="mailto:${esc(o.email)}">${esc(o.email)}</a>` : '') : ''}
+    ${(dono || publico) ? row('LinkedIn', o.linkedin ? `<a href="${esc(o.linkedin)}" target="_blank" rel="noopener">${esc(o.linkedin)}</a>` : '') : ''}
+    ${(dono || publico) ? row('Telefone para contato', o.telefone ? `<a href="tel:${esc(o.telefone)}">${esc(o.telefone)}</a>` : '') : ''}
+    ${(dono || publico) ? row('Outros', o.outros ? esc(o.outros).replace(/\n/g, '<br>') : '') : ''}
     ${o.demo ? '<div><dd class="muted">Organização de exemplo validada pelo ecossistema.</dd></div>' : ''}
   </dl>`;
   $('#orgDlg').showModal();
@@ -790,7 +796,7 @@ $('#f-cnpj').addEventListener('input', e => {
 $('#cidadesList').innerHTML = Object.keys(CIDADES).map(c => `<option value="${c}">`).join('');
 $('#areasBox').innerHTML = Object.keys(CIDADES).map(c => `<label class="check"><input type="checkbox" name="areas" value="${esc(c)}"><span>${esc(c)}</span></label>`).join('');
 
-const STEP_FIELDS = [['nome', 'tipo'], ['cep', 'numero', 'rua', 'bairro', 'cidade', 'areas'], ['desc'], ['site', 'email', 'autoriza']];
+const STEP_FIELDS = [['nome', 'tipo'], ['cep', 'numero', 'rua', 'bairro', 'cidade', 'areas'], ['desc'], ['site', 'email', 'linkedin', 'autoriza']];
 const RULES = {
   nome:   v => v.trim().length >= 3 ? '' : 'Informe o nome da organização.',
   tipo:   v => v ? '' : 'Selecione o tipo de ator.',
@@ -803,6 +809,7 @@ const RULES = {
   desc:   v => v.trim().length < 20 ? 'Descreva a organização em pelo menos 20 caracteres.' : v.trim().length > 600 ? 'A descrição deve ter no máximo 600 caracteres.' : '',
   site:   v => !v.trim() || isUrl(v.trim()) ? '' : 'Link inválido. Use o formato https://...',
   email:  v => !v.trim() || /^\S+@\S+\.\S+$/.test(v.trim()) ? '' : 'E-mail inválido.',
+  linkedin: v => !v.trim() || isUrl(v.trim()) ? '' : 'Link inválido. Use o formato https://...',
   autoriza: v => v ? '' : 'Escolha uma das opções de autorização.'
 };
 const getVal = n => n === 'areas' ? $$('[name=areas]:checked', form).map(c => c.value)
@@ -898,7 +905,7 @@ function initForm() {
     $('#f-tipo-cadastro').dispatchEvent(new Event('change'));
     form.elements.razaoSocial.value = o.razaoSocial || '';
     form.elements.cnpj.value = o.cnpj || '';
-    ['nome', 'tipo', 'cep', 'numero', 'rua', 'bairro', 'cidade', 'desc', 'site', 'email'].forEach(n => form.elements[n].value = o[n] || '');
+    ['nome', 'tipo', 'cep', 'numero', 'rua', 'bairro', 'cidade', 'desc', 'site', 'email', 'linkedin', 'telefone', 'outros'].forEach(n => form.elements[n].value = o[n] || '');
     ['comp', 'rec', 'dem'].forEach(name => setCreatableValues(name, tags(o[name])));
     $$('[name=areas]', form).forEach(c => c.checked = (o.areas || []).includes(c.value));
     const r = $(`[name=autoriza][value=${o.autoriza ? 'sim' : 'nao'}]`, form); if (r) r.checked = true;
@@ -943,7 +950,7 @@ form.addEventListener('submit', async e => {
     nome: getVal('nome').trim(), tipoCadastro: getVal('tipoCadastro'), razaoSocial: getVal('razaoSocial').trim(), cnpj: getVal('cnpj').trim(), tipo: getVal('tipo'), cep: getVal('cep').trim(), numero: getVal('numero').trim(),
     rua: getVal('rua').trim(), bairro: getVal('bairro').trim(), cidade: getVal('cidade').trim(), areas: getVal('areas'),
     desc: getVal('desc').trim(), comp: getVal('comp').trim(), rec: getVal('rec').trim(), dem: getVal('dem').trim(),
-    site: getVal('site').trim(), email: getVal('email').trim(), autoriza: getVal('autoriza') === 'sim'
+    site: getVal('site').trim(), email: getVal('email').trim(), linkedin: getVal('linkedin').trim(), telefone: getVal('telefone').trim(), outros: getVal('outros').trim(), autoriza: getVal('autoriza') === 'sim'
   };
   const geo = await geocode(d);
   const orgs = DB.orgs(), now = new Date().toISOString();
@@ -969,6 +976,9 @@ form.addEventListener('submit', async e => {
         demandas: d.dem,
         site: d.site,
         email: d.email,
+        linkedin: d.linkedin,
+        telefone_contato: d.telefone,
+        outros_contato: d.outros,
         autoriza: d.autoriza,
         lat: geo.lat,
         lng: geo.lng,

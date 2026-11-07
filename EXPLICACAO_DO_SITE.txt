@@ -207,6 +207,7 @@ não sobrecarregar o usuário e garantir qualidade dos dados.
 - Seção 4: Contato, LGPD e Envio
   * Site Institucional (validação de formato de URL)
   * E-mail Institucional para Contato (validação de formato de e-mail)
+  * LinkedIn (validação de formato de URL), telefone para contato e campo "Outros"
   * Autorização Explícita de Publicação: Escolha obrigatória entre "Sim, autorizo" ou "Não autorizo"
   * Botão de Ajuda ("Ver dicas de preenchimento"): Modal com exemplos práticos de como descrever diferenciais, competências e demandas.
 

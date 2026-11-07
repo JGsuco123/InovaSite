@@ -51,6 +51,9 @@ CREATE TABLE IF NOT EXISTS public.organizacoes (
     demandas TEXT DEFAULT '',
     site VARCHAR(255) DEFAULT '',
     email VARCHAR(255) DEFAULT '',
+    linkedin VARCHAR(255) DEFAULT '',
+    telefone_contato VARCHAR(30) DEFAULT '',
+    outros_contato TEXT DEFAULT '',
     autoriza BOOLEAN NOT NULL DEFAULT false,
     lat DOUBLE PRECISION,
     lng DOUBLE PRECISION,
@@ -66,6 +69,9 @@ COMMENT ON COLUMN public.organizacoes.areas IS 'Cidades e regiões de atuação 
 COMMENT ON COLUMN public.organizacoes.recursos IS 'Itens em “Eu tenho”: recursos disponíveis para colaboração mútua (usados no matchmaking).';
 COMMENT ON COLUMN public.organizacoes.demandas IS 'Itens em “Eu procuro”: problemas e necessidades de parcerias (usados no matchmaking).';
 COMMENT ON COLUMN public.organizacoes.status IS 'Status da moderação: analise, aprovada, rejeitada ou privada.';
+ALTER TABLE public.organizacoes ADD COLUMN IF NOT EXISTS linkedin VARCHAR(255) DEFAULT '';
+ALTER TABLE public.organizacoes ADD COLUMN IF NOT EXISTS telefone_contato VARCHAR(30) DEFAULT '';
+ALTER TABLE public.organizacoes ADD COLUMN IF NOT EXISTS outros_contato TEXT DEFAULT '';
 
 -- ==============================================================================
 -- 4. TABELA DE DIAGNÓSTICOS DE INOVAÇÃO (public.diagnosticos)
