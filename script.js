@@ -300,6 +300,41 @@ function requireAuth(fn, msg) {
 }
 
 /* ---------- SINCRONIZAÇÃO COM SUPABASE ---------- */
+function mapSupabaseOrg(o) {
+  return {
+    id: o.id,
+    ownerId: o.owner_id,
+    tipoCadastro: o.tipo_cadastro,
+    nome: o.nome,
+    razaoSocial: o.razao_social,
+    cnpj: o.cnpj,
+    tipo: o.tipo,
+    cep: o.cep,
+    numero: o.numero,
+    rua: o.rua,
+    bairro: o.bairro,
+    cidade: o.cidade,
+    areas: o.areas || [],
+    desc: o.descricao,
+    comp: o.competencias,
+    rec: o.recursos,
+    dem: o.demandas,
+    site: o.site,
+    email: o.email,
+    linkedin: o.linkedin,
+    telefone: o.telefone_contato,
+    outros: o.outros_contato,
+    autoriza: o.autoriza,
+    lat: o.lat,
+    lng: o.lng,
+    status: o.status,
+    motivo: o.motivo_rejeicao,
+    demo: o.is_demo,
+    criado: o.created_at,
+    atualizado: o.updated_at
+  };
+}
+
 async function fetchOrgsFromSupabase() {
   if (!sb) return;
   try {
@@ -309,38 +344,7 @@ async function fetchOrgsFromSupabase() {
       return;
     }
     if (Array.isArray(data)) {
-      const mapped = data.map(o => ({
-        id: o.id,
-        ownerId: o.owner_id,
-        tipoCadastro: o.tipo_cadastro,
-        nome: o.nome,
-        razaoSocial: o.razao_social,
-        cnpj: o.cnpj,
-        tipo: o.tipo,
-        cep: o.cep,
-        numero: o.numero,
-        rua: o.rua,
-        bairro: o.bairro,
-        cidade: o.cidade,
-        areas: o.areas || [],
-        desc: o.descricao,
-        comp: o.competencias,
-        rec: o.recursos,
-        dem: o.demandas,
-        site: o.site,
-        email: o.email,
-        linkedin: o.linkedin,
-        telefone: o.telefone_contato,
-        outros: o.outros_contato,
-        autoriza: o.autoriza,
-        lat: o.lat,
-        lng: o.lng,
-        status: o.status,
-        motivo: o.motivo_rejeicao,
-        demo: o.is_demo,
-        criado: o.created_at,
-        atualizado: o.updated_at
-      }));
+      const mapped = data.map(mapSupabaseOrg);
       DB.saveOrgs(mapped);
       refreshAllMaps();
     }
@@ -953,11 +957,11 @@ form.addEventListener('submit', async e => {
     site: getVal('site').trim(), email: getVal('email').trim(), linkedin: getVal('linkedin').trim(), telefone: getVal('telefone').trim(), outros: getVal('outros').trim(), autoriza: getVal('autoriza') === 'sim'
   };
   const geo = await geocode(d);
-  const orgs = DB.orgs(), now = new Date().toISOString();
+  const now = new Date().toISOString();
   const status = d.autoriza ? 'analise' : 'privada';
 
-  if (sb && user()) {
-    try {
+  try {
+    if (sb && user()) {
       const payload = {
         nome: d.nome,
         tipo_cadastro: d.tipoCadastro,
@@ -985,25 +989,41 @@ form.addEventListener('submit', async e => {
         status,
         owner_id: user().id
       };
+      let result;
       if (editingId && !editingId.startsWith('demo')) {
-        await sb.from('organizacoes').update(payload).eq('id', editingId);
+        result = await sb.from('organizacoes').update(payload).eq('id', editingId).select('*').single();
       } else {
-        await sb.from('organizacoes').insert(payload);
+        result = await sb.from('organizacoes').insert(payload).select('*').single();
       }
-      await fetchOrgsFromSupabase();
-    } catch (err) {
-      console.warn('Erro ao salvar no Supabase:', err);
+      if (result.error) throw result.error;
+      if (!result.data) throw new Error('O Supabase não retornou a organização salva.');
+
+      const saved = mapSupabaseOrg(result.data);
+      const orgs = DB.orgs();
+      const index = orgs.findIndex(o => o.id === saved.id);
+      if (index >= 0) orgs[index] = saved;
+      else orgs.push(saved);
+      DB.saveOrgs(orgs);
+    } else {
+      const orgs = DB.orgs();
+      if (editingId) {
+        const index = orgs.findIndex(o => o.id === editingId);
+        if (index >= 0) orgs[index] = { ...orgs[index], ...d, ...geo, status, motivo: '', atualizado: now };
+      } else {
+        orgs.push({ id: uid(), ownerId: DB.session(), ...d, ...geo, status, criado: now, atualizado: now });
+      }
+      DB.saveOrgs(orgs);
     }
+  } catch (err) {
+    console.warn('Erro ao salvar organização:', err);
+    const detail = err && err.message ? ` ${err.message}` : '';
+    toast(`Não foi possível salvar a organização.${detail}`, true);
+    return;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = old;
   }
 
-  if (editingId) {
-    const i = orgs.findIndex(o => o.id === editingId);
-    if (i >= 0) orgs[i] = { ...orgs[i], ...d, ...geo, status, motivo: '', atualizado: now };
-  } else {
-    orgs.push({ id: uid(), ownerId: DB.session(), ...d, ...geo, status, criado: now, atualizado: now });
-  }
-  DB.saveOrgs(orgs);
-  btn.disabled = false; btn.textContent = old;
   toast(d.autoriza ? 'Organização enviada! Ela será analisada pela moderação.' : 'Organização salva no seu painel privado.');
   editingId = null;
   refreshAllMaps();
